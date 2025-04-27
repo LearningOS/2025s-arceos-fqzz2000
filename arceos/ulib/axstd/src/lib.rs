@@ -70,6 +70,7 @@ pub mod process;
 pub mod sync;
 pub mod thread;
 pub mod time;
+#[cfg(feature = "alloc")]
 pub mod axcollections;
 #[cfg(feature = "fs")]
 pub mod fs;
