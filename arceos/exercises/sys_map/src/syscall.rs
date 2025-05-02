@@ -7,7 +7,12 @@ use axerrno::LinuxError;
 use axtask::current;
 use axtask::TaskExtRef;
 use axhal::paging::MappingFlags;
+use axhal::mem::PhysAddr;
+use axhal::mem::VirtAddr;
 use arceos_posix_api as api;
+use memory_addr::VirtAddrRange;
+use alloc::vec;
+
 
 const SYS_IOCTL: usize = 29;
 const SYS_OPENAT: usize = 56;
@@ -131,6 +136,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
     ret
 }
 
+
 #[allow(unused_variables)]
 fn sys_mmap(
     addr: *mut usize,
@@ -140,7 +146,36 @@ fn sys_mmap(
     fd: i32,
     _offset: isize,
 ) -> isize {
-    unimplemented!("no sys_mmap!");
+    let mut buf = [0u8; 64];
+    let curr = current();
+    let mut uspace = curr.task_ext().aspace.lock();
+    // align the address to 4k
+    let vaddr = VirtAddr::from(0x100000);
+
+
+    match uspace.map_alloc(vaddr, 4096, MappingFlags::READ|MappingFlags::WRITE|MappingFlags::EXECUTE|MappingFlags::USER, true) {
+        Ok(_) => (),
+        Err(_) => panic!("Mapping failed for segment{}", vaddr.as_usize()),
+    }
+
+    let (paddr, _, _) = uspace
+        .page_table()
+        .query(vaddr)
+        .unwrap_or_else(|_| panic!("Mapping failed for segment"));
+    let buf = vec![0 as u8; length];
+    sys_read(fd, buf.as_ptr() as *mut c_void, length);
+    info!("buf: {:#x?}", buf);
+    // uspace.write(vaddr, buf.as_slice()).unwrap();
+    // ax_println!("paddr: {:#x}", paddr);
+
+    unsafe {
+        core::ptr::copy_nonoverlapping(
+            buf.as_ptr(),
+            vaddr.as_mut_ptr(),
+            length,
+        );
+    }
+    vaddr.as_usize() as isize
 }
 
 fn sys_openat(dfd: c_int, fname: *const c_char, flags: c_int, mode: api::ctypes::mode_t) -> isize {
