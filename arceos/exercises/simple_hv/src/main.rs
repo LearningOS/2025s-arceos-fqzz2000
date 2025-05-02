@@ -103,12 +103,13 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
         },
         Trap::Exception(Exception::IllegalInstruction) => {
             let bad_inst = stval::read();
-            if bad_inst == 0xf14025f3 {
-                // ctx.guest_regs.gprs.set_reg(A1, 0);
-                ctx.guest_regs.sepc += 4;
-                ax_println!("Bad instruction: {:#x} sepc: {:#x}", bad_inst, ctx.guest_regs.sepc);
-                return true;
-            }
+            // ax_println!("Bad instruction: {:#x} sepc: {:#x}", bad_inst, ctx.guest_regs.sepc);
+            // if bad_inst == 0xf14025f3 {
+            //     // ctx.guest_regs.gprs.set_reg(A1, 0);
+            //     // ctx.guest_regs.sepc += 4;
+                
+            //     return false;
+            // }
             panic!("Bad instruction: {:#x} sepc: {:#x}",
                 bad_inst,
                 ctx.guest_regs.sepc
