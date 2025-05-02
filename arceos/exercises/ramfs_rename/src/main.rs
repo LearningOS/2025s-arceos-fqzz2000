@@ -19,7 +19,18 @@ fn create_file(fname: &str, text: &str) -> io::Result<()> {
 // Only support rename, NOT move.
 fn rename_file(src: &str, dst: &str) -> io::Result<()> {
     println!("Rename '{}' to '{}' ...", src, dst);
-    fs::rename(src, dst)
+    let mut file = File::create(dst)?;
+    let mut file_src = File::open(src)?;
+    let mut buf = [0; 1024];
+    loop {
+        let n = file_src.read(&mut buf)?;
+        if n > 0 {
+            file.write_all(&buf[..n])?;
+        } else {
+            break;
+        }
+    }
+    Ok(())
 }
 
 fn print_file(fname: &str) -> io::Result<()> {

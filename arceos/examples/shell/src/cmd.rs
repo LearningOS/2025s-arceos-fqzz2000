@@ -27,6 +27,8 @@ const CMD_TABLE: &[(&str, CmdHandler)] = &[
     ("pwd", do_pwd),
     ("rm", do_rm),
     ("uname", do_uname),
+    ("rename", do_rename),
+    ("mv", do_rename),
 ];
 
 fn file_type_to_char(ty: FileType) -> char {
@@ -64,6 +66,37 @@ const fn file_perm_to_rwx(mode: u32) -> [u8; 9] {
     set!(5, b'r'); set!(4, b'w'); set!(3, b'x');
     set!(8, b'r'); set!(7, b'w'); set!(6, b'x');
     perm
+}
+
+
+fn do_rename(args: &str) {
+    let (old, new) = split_whitespace(args);
+    if let Ok(metadata) = fs::metadata(new) {
+        let file_type = metadata.file_type();
+        if file_type.is_dir() {
+           println!("rename: {old} to {new} is a directory");
+            let new_path = String::from(new) + "/" + old;
+            let mut file_new = File::create(new_path.as_str()).unwrap();
+            // copy the old file to the new path
+            let mut buf = [0; 1024];
+            let mut file = File::open(old).unwrap();
+            loop {
+                let n = file.read(&mut buf).unwrap();
+                if n > 0 {
+                    file_new.write_all(&buf[..n]).unwrap();
+                } else {
+                    break;
+                }
+            }
+            // remove the old file
+            fs::remove_file(old).unwrap();
+            return;
+        } 
+    } else {
+        if let Err(e) = fs::rename(old, new) {
+            print_err!("rename", format_args!("cannot rename '{old}' to '{new}'"), e);
+        }
+    }
 }
 
 fn do_ls(args: &str) {
